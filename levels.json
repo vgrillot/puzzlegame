@@ -1,0 +1,31 @@
+{
+  "levels": [
+    {
+      "id": "classic",
+      "name": "Classic Escape",
+      "size": { "rows": 7, "cols": 6 },
+      "exit": { "row": 6, "columns": [2, 3] },
+      "grid": [
+        "++++++",
+        "+....+",
+        "+....+",
+        "+....+",
+        "+....+",
+        "+....+",
+        "++  ++"
+      ],
+      "pieces": [
+        { "id": "d", "type": "d", "row": 1, "col": 2, "width": 2, "height": 2 },
+        { "id": "b1", "type": "b", "row": 3, "col": 2, "width": 2, "height": 1 },
+        { "id": "c1", "type": "c", "row": 1, "col": 1, "width": 1, "height": 2 },
+        { "id": "c2", "type": "c", "row": 1, "col": 4, "width": 1, "height": 2 },
+        { "id": "c3", "type": "c", "row": 4, "col": 1, "width": 1, "height": 2 },
+        { "id": "c4", "type": "c", "row": 4, "col": 4, "width": 1, "height": 2 },
+        { "id": "a1", "type": "a", "row": 4, "col": 2, "width": 1, "height": 1 },
+        { "id": "a2", "type": "a", "row": 4, "col": 3, "width": 1, "height": 1 },
+        { "id": "a3", "type": "a", "row": 5, "col": 2, "width": 1, "height": 1 },
+        { "id": "a4", "type": "a", "row": 5, "col": 3, "width": 1, "height": 1 }
+      ]
+    }
+  ]
+}

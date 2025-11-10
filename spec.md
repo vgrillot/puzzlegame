@@ -1,8 +1,31 @@
-
-
 je veux que tu m'aides à construire un jeu à la tictactoe
 minimaliste et simpliste
 en pure js ou presque, canvas, vanilla.js, alpine.js
+
+# Implementation guidelines
+
+## Platform and rendering
+
+- The game must run fully in the browser with no backend dependencies.
+- Initial target is desktop browsers; adapt the layout dynamically to the current window size.
+- Choose the rendering stack you judge best (vanilla JS, Canvas API, Alpine.js...), but keep it lightweight.
+
+## Interaction model
+
+- Pieces are moved via mouse dragging; plan for touch support later.
+- Movements must respect the collision rules already defined for the pieces and walls.
+
+## Game state management
+
+- Track the number of moves performed during a session.
+- Maintain a chronological move history with full undo support (last move reversible at minimum).
+- Persist the initial board layout and future levels inside JSON definitions to ease extension.
+
+## Victory flow and presentation
+
+- When the `d` block exits, end the game with a victory state.
+- Offer a fast replay of the recorded moves so players can review the solution.
+- Apply a shiny, polished visual style for the board, pieces, and UI elements.
 
 # presentation du jeu
 

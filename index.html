@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shiny Sliding Puzzle</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <main class="app-shell">
+        <header class="app-header">
+            <h1>Shiny Sliding Puzzle</h1>
+            <p class="subtitle">Guide the red block to the exit. Drag pieces with your mouse to solve the puzzle.</p>
+        </header>
+
+        <section class="game-wrapper">
+            <div class="board-mount">
+                <div id="board" class="board" aria-label="Sliding puzzle board"></div>
+                <div class="overlay" id="victoryOverlay" hidden>
+                    <div class="overlay-card">
+                        <h2>Victory!</h2>
+                        <p id="victorySummary"></p>
+                        <div class="overlay-actions">
+                            <button id="replayButton" class="primary">Replay Solution</button>
+                            <button id="restartButton" class="secondary">Restart</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <aside class="sidebar" aria-label="Game controls and history">
+                <div class="panel">
+                    <h2>Stats</h2>
+                    <div class="stats-grid">
+                        <div>
+                            <span class="label">Moves</span>
+                            <span id="moveCounter" class="value">0</span>
+                        </div>
+                        <div>
+                            <span class="label">Elapsed</span>
+                            <span id="elapsedTime" class="value">00:00</span>
+                        </div>
+                    </div>
+                    <div class="controls">
+                        <button id="undoButton" class="secondary" disabled>Undo</button>
+                        <button id="resetButton" class="secondary">Reset</button>
+                        <button id="playbackButton" class="secondary" disabled>Replay Moves</button>
+                    </div>
+                </div>
+                <div class="panel history-panel">
+                    <h2>Move History</h2>
+                    <ol id="historyList" class="history-list" aria-live="polite"></ol>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <script src="game.js" type="module"></script>
+</body>
+</html>

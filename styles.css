@@ -1,0 +1,341 @@
+:root {
+    color-scheme: light;
+    font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: radial-gradient(circle at top, #181530, #0d0618 60%, #05030d 100%);
+    --board-bg: rgba(255, 255, 255, 0.08);
+    --cell-bg: rgba(255, 255, 255, 0.12);
+    --wall-color: rgba(255, 255, 255, 0.35);
+    --exit-color: rgba(255, 220, 120, 0.8);
+    --text-color: #ffffff;
+    --accent: #ff579a;
+    --accent-strong: #ff2463;
+    --glow: rgba(255, 87, 154, 0.45);
+    --panel-bg: rgba(8, 6, 20, 0.55);
+    --border-radius: 18px;
+    --transition: 220ms ease;
+    --rows: 6;
+    --cols: 4;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text-color);
+}
+
+.app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 2.5rem clamp(1.5rem, 2vw + 1rem, 4rem) 3rem;
+    backdrop-filter: blur(30px);
+}
+
+.app-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.app-header h1 {
+    font-size: clamp(2.5rem, 4vw, 3.5rem);
+    margin: 0;
+    text-shadow: 0 0 35px var(--glow);
+}
+
+.subtitle {
+    margin: 0.75rem auto 0;
+    max-width: 30rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.game-wrapper {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(260px, 320px);
+    gap: clamp(1.5rem, 3vw, 2.75rem);
+    align-items: start;
+}
+
+.board-mount {
+    position: relative;
+    padding: 1.5rem;
+    border-radius: calc(var(--border-radius) * 1.4);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02));
+    box-shadow:
+        0 25px 45px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.board {
+    position: relative;
+    width: min(540px, 65vw);
+    aspect-ratio: 1 / 1;
+    margin: 0 auto;
+    background: var(--board-bg);
+    border-radius: calc(var(--border-radius) * 1.1);
+    display: grid;
+    grid-template-columns: repeat(var(--cols), 1fr);
+    grid-template-rows: repeat(var(--rows), 1fr);
+    gap: clamp(6px, 1vw, 12px);
+    padding: clamp(8px, 1.5vw, 14px);
+    box-shadow:
+        inset 0 0 18px rgba(0, 0, 0, 0.55),
+        0 0 45px rgba(255, 87, 154, 0.1);
+}
+
+.cell {
+    border-radius: calc(var(--border-radius) * 0.55);
+    background: var(--cell-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.wall {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.12));
+    box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);
+}
+
+.exit {
+    background: radial-gradient(circle, rgba(255, 220, 120, 0.9), rgba(255, 163, 26, 0.55));
+    box-shadow:
+        inset 0 0 22px rgba(255, 255, 255, 0.65),
+        0 0 25px rgba(255, 163, 26, 0.7);
+}
+
+.piece {
+    position: absolute;
+    border-radius: calc(var(--border-radius) * 0.8);
+    box-shadow:
+        0 12px 25px rgba(0, 0, 0, 0.35),
+        inset 0 3px 0 rgba(255, 255, 255, 0.3);
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.piece:active {
+    cursor: grabbing;
+    box-shadow:
+        0 20px 35px rgba(0, 0, 0, 0.45),
+        inset 0 3px 0 rgba(255, 255, 255, 0.3);
+}
+
+.piece[data-type="a"] {
+    background: linear-gradient(135deg, #00f0ff, #0b9dff);
+}
+
+.piece[data-type="b"] {
+    background: linear-gradient(135deg, #ffe066, #ffb347);
+}
+
+.piece[data-type="c"] {
+    background: linear-gradient(135deg, #ff8a4c, #ff5f6d);
+}
+
+.piece[data-type="d"] {
+    background: linear-gradient(135deg, #ff4444, #ff0059);
+    box-shadow:
+        0 25px 45px rgba(255, 0, 89, 0.45),
+        inset 0 3px 0 rgba(255, 255, 255, 0.35);
+}
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.panel {
+    padding: 1.5rem;
+    background: var(--panel-bg);
+    border-radius: calc(var(--border-radius) * 0.9);
+    box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.panel h2 {
+    margin: 0 0 1rem;
+    font-size: 1.1rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.label {
+    display: block;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.value {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+button {
+    border: none;
+    border-radius: calc(var(--border-radius) * 0.55);
+    padding: 0.65rem 1.55rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.6);
+}
+
+button.primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    color: #fff;
+    box-shadow:
+        0 15px 30px rgba(255, 36, 99, 0.4),
+        inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+
+button.secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 22px rgba(255, 87, 154, 0.25);
+}
+
+.history-panel {
+    max-height: 420px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.history-list {
+    flex: 1;
+    margin: 0;
+    padding: 0;
+    list-style: decimal;
+    list-style-position: inside;
+    overflow-y: auto;
+    gap: 1rem;
+    display: grid;
+}
+
+.history-list li {
+    padding: 0.35rem 0.5rem;
+    border-radius: calc(var(--border-radius) * 0.35);
+    background: rgba(255, 255, 255, 0.08);
+    border-left: 3px solid rgba(255, 255, 255, 0.2);
+    font-size: 0.9rem;
+}
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    background: rgba(12, 8, 26, 0.65);
+    border-radius: calc(var(--border-radius) * 1.4);
+}
+
+.overlay-card {
+    padding: 2rem;
+    background: linear-gradient(145deg, rgba(25, 20, 45, 0.9), rgba(50, 32, 68, 0.95));
+    border-radius: calc(var(--border-radius) * 1.1);
+    text-align: center;
+    box-shadow:
+        0 25px 40px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.overlay-card h2 {
+    margin: 0 0 0.75rem;
+    font-size: 2rem;
+}
+
+.overlay-card p {
+    margin: 0 0 1.25rem;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.overlay-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+@media (max-width: 960px) {
+    .game-wrapper {
+        grid-template-columns: 1fr;
+    }
+
+    .board {
+        width: min(75vw, 440px);
+    }
+
+    .sidebar {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .panel {
+        flex: 1 1 240px;
+    }
+}
+
+@media (max-width: 640px) {
+    .app-shell {
+        padding: 2rem 1.25rem;
+    }
+
+    .board {
+        width: min(90vw, 360px);
+        gap: clamp(4px, 1.5vw, 8px);
+        padding: clamp(6px, 2vw, 12px);
+    }
+
+    .controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .overlay-actions {
+        flex-direction: column;
+    }
+}
