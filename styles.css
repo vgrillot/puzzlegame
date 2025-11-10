@@ -63,6 +63,9 @@ body {
 .board-mount {
     position: relative;
     padding: 1.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     border-radius: calc(var(--border-radius) * 1.4);
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02));
     box-shadow:
@@ -73,16 +76,16 @@ body {
 
 .board {
     position: relative;
-    width: min(540px, 65vw);
-    aspect-ratio: 1 / 1;
+    width: min(540px, 75vw);
+    height: min(540px, 75vw);
     margin: 0 auto;
     background: var(--board-bg);
     border-radius: calc(var(--border-radius) * 1.1);
     display: grid;
     grid-template-columns: repeat(var(--cols), 1fr);
     grid-template-rows: repeat(var(--rows), 1fr);
-    gap: clamp(6px, 1vw, 12px);
-    padding: clamp(8px, 1.5vw, 14px);
+    gap: 4px;
+    padding: 8px;
     box-shadow:
         inset 0 0 18px rgba(0, 0, 0, 0.55),
         0 0 45px rgba(255, 87, 154, 0.1);
@@ -144,29 +147,22 @@ body {
 .piece[data-type="d"] {
     background: linear-gradient(135deg, #ff4444, #ff0059);
     box-shadow:
-        0 25px 45px rgba(255, 0, 89, 0.45),
         inset 0 3px 0 rgba(255, 255, 255, 0.35);
 }
 
 .sidebar {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
 }
 
-.panel {
-    padding: 1.5rem;
-    background: var(--panel-bg);
-    border-radius: calc(var(--border-radius) * 0.9);
-    box-shadow:
-        0 8px 20px rgba(0, 0, 0, 0.35),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+.history-panel {
+    display: none; /* Masquer le panneau d'historique */
 }
 
 .panel h2 {
     margin: 0 0 1rem;
     font-size: 1.1rem;
-    letter-spacing: 0.04em;
+{{ ... }}
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.75);
 }

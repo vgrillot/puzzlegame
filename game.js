@@ -1,48 +1,54 @@
-const LEVELS = [
-    {
-        id: "classic",
-        name: "Classic Escape",
-        rows: 6,
-        cols: 6,
-        exit: { row: 5, columns: [2, 3] },
-        pieces: [
-            { id: "d1", type: "d", row: 1, col: 2, width: 2, height: 2 },
-            { id: "b1", type: "b", row: 3, col: 2, width: 2, height: 1 },
-            { id: "c1", type: "c", row: 1, col: 1, width: 1, height: 2 },
-            { id: "c2", type: "c", row: 1, col: 4, width: 1, height: 2 },
-            { id: "c3", type: "c", row: 3, col: 1, width: 1, height: 2 },
-            { id: "c4", type: "c", row: 3, col: 4, width: 1, height: 2 },
-            { id: "a1", type: "a", row: 4, col: 2, width: 1, height: 1 },
-            { id: "a2", type: "a", row: 4, col: 3, width: 1, height: 1 },
-            { id: "a3", type: "a", row: 4, col: 1, width: 1, height: 1 },
-            { id: "a4", type: "a", row: 4, col: 4, width: 1, height: 1 },
-        ],
-    },
-];
+// Configuration du niveau
+const LEVEL = {
+    id: "classic",
+    name: "Classic Escape",
+    rows: 7,  // Augmenté de 6 à 7 pour correspondre au JSON
+    cols: 6,
+    exit: { row: 6, columns: [2, 3] },  // Ajusté pour la 7ème ligne
+    pieces: [
+        // Pièce principale (rouge)
+        { id: "d", type: "d", row: 1, col: 2, width: 2, height: 2 },
+        // Pièce horizontale
+        { id: "b1", type: "b", row: 3, col: 2, width: 2, height: 1 },
+        // Pièces verticales
+        { id: "c1", type: "c", row: 1, col: 1, width: 1, height: 2 },
+        { id: "c2", type: "c", row: 1, col: 4, width: 1, height: 2 },
+        { id: "c3", type: "c", row: 4, col: 1, width: 1, height: 2 },  // Ajusté pour commencer à la ligne 4
+        { id: "c4", type: "c", row: 4, col: 4, width: 1, height: 2 },  // Ajusté pour commencer à la ligne 4
+        // Petits carrés
+        { id: "a1", type: "a", row: 4, col: 2, width: 1, height: 1 },
+        { id: "a2", type: "a", row: 4, col: 3, width: 1, height: 1 },
+        { id: "a3", type: "a", row: 5, col: 2, width: 1, height: 1 },  // Déplacé à la ligne 5
+        { id: "a4", type: "a", row: 5, col: 3, width: 1, height: 1 }   // Déplacé à la ligne 5
+    ]
+};
 
-const boardElement = document.getElementById("board");
-const moveCounterElement = document.getElementById("moveCounter");
-const elapsedTimeElement = document.getElementById("elapsedTime");
-const historyListElement = document.getElementById("historyList");
-const undoButton = document.getElementById("undoButton");
-const resetButton = document.getElementById("resetButton");
-const playbackButton = document.getElementById("playbackButton");
-const replayButton = document.getElementById("replayButton");
-const restartButton = document.getElementById("restartButton");
-const victoryOverlay = document.getElementById("victoryOverlay");
-const victorySummary = document.getElementById("victorySummary");
-
-const state = {
-    level: LEVELS[0],
+// État initial du jeu
+const initialState = {
     pieces: new Map(),
     history: [],
-    undone: [],
-    dragContext: null,
-    startTime: 0,
-    timerHandle: null,
+    draggedPiece: null,
+    dragStartX: 0,
+    dragStartY: 0,
     victory: false,
-    replaying: false,
+    startTime: null,
+    timer: null
 };
+
+// Récupération des éléments DOM
+const boardElement = document.getElementById('board');
+const moveCounterElement = document.getElementById('moveCounter');
+const elapsedTimeElement = document.getElementById('elapsedTime');
+const historyListElement = document.getElementById('historyList');
+const undoButton = document.getElementById('undoButton');
+const resetButton = document.getElementById('resetButton');
+const replayButton = document.getElementById('replayButton');
+const restartButton = document.getElementById('restartButton');
+const playbackButton = document.getElementById('playbackButton');
+const victoryOverlay = document.getElementById('victoryOverlay');
+const victorySummary = document.getElementById('victorySummary');
+
+let state = { ...initialState };
 
 function formatTime(ms) {
     const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -54,15 +60,28 @@ function formatTime(ms) {
 function startTimer() {
     stopTimer();
     state.startTime = performance.now();
-    state.timerHandle = setInterval(updateElapsed, 250);
+    state.timer = setInterval(updateElapsed, 250);
     updateElapsed();
 }
 
 function stopTimer() {
-    if (state.timerHandle) {
-        clearInterval(state.timerHandle);
-        state.timerHandle = null;
+    if (state.timer) {
+        clearInterval(state.timer);
+        state.timer = null;
     }
+}
+
+function updateUI() {
+    // Mettre à jour le compteur de mouvements
+    moveCounterElement.textContent = state.history.length;
+    
+    // Activer/désactiver les boutons en fonction de l'état
+    undoButton.disabled = state.victory || state.history.length === 0 || state.isDragging;
+    playbackButton.disabled = state.victory || state.history.length === 0 || state.isDragging;
+    resetButton.disabled = false;
+    
+    // Mettre à jour l'historique des mouvements
+    updateMoveHistory();
 }
 
 function updateElapsed() {
@@ -73,47 +92,86 @@ function updateElapsed() {
     elapsedTimeElement.textContent = formatTime(performance.now() - state.startTime);
 }
 
+function disableAllButtons(disabled) {
+    const buttons = [
+        undoButton, 
+        resetButton, 
+        playbackButton, 
+        replayButton, 
+        restartButton
+    ];
+    
+    buttons.forEach(button => {
+        if (button) button.disabled = disabled;
+    });
+}
+
 function resetState() {
+    // Réinitialiser l'état du jeu
     state.pieces.clear();
     state.history = [];
     state.undone = [];
     state.victory = false;
+    state.isDragging = false;
+    state.draggedPiece = null;
+    state.dragStartX = 0;
+    state.dragStartY = 0;
     state.replaying = false;
     state.dragContext = null;
+    state.startTime = 0;
+    state.timer = null;
+    
+    // Réinitialiser l'interface
     moveCounterElement.textContent = "0";
+    elapsedTimeElement.textContent = "00:00";
     historyListElement.innerHTML = "";
     victoryOverlay.hidden = true;
+    
+    // Réactiver tous les boutons
+    disableAllButtons(false);
+    
+    // Désactiver les boutons inutiles au démarrage
     undoButton.disabled = true;
     playbackButton.disabled = true;
+    replayButton.disabled = true;
 }
 
-function createBoard(level) {
-    boardElement.innerHTML = "";
-    boardElement.style.setProperty("--rows", String(level.rows));
-    boardElement.style.setProperty("--cols", String(level.cols));
-
+function createBoard() {
+    // Vider le plateau
+    boardElement.innerHTML = '';
+    
+    // Définir la grille CSS
+    boardElement.style.setProperty('--rows', LEVEL.rows);
+    boardElement.style.setProperty('--cols', LEVEL.cols);
+    
+    // Créer les cellules du plateau
     const fragment = document.createDocumentFragment();
-    for (let row = 0; row < level.rows; row += 1) {
-        for (let col = 0; col < level.cols; col += 1) {
-            const cell = document.createElement("div");
-            cell.className = "cell";
-
-            const isBorder = row === 0 || col === 0 || row === level.rows - 1 || col === level.cols - 1;
-            const isExit =
-                row === level.exit.row &&
-                col >= level.exit.columns[0] &&
-                col <= level.exit.columns[1];
-
-            if (isBorder && !isExit) {
-                cell.classList.add("wall");
+    
+    for (let row = 0; row < LEVEL.rows; row++) {
+        for (let col = 0; col < LEVEL.cols; col++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            
+            // Vérifier si c'est un mur ou une sortie en fonction de la grille
+            const isWall = (row === 0) ||  // Mur du haut
+                          (col === 0) ||   // Mur de gauche
+                          (col === LEVEL.cols - 1) ||  // Mur de droite
+                          (row === LEVEL.rows - 1 && (col === 0 || col === 1 || col === 4 || col === 5));  // Mur du bas avec sortie au milieu
+            
+            const isExit = row === LEVEL.exit.row && 
+                          col >= LEVEL.exit.columns[0] && 
+                          col <= LEVEL.exit.columns[1];
+            
+            if (isWall && !isExit) {
+                cell.classList.add('wall');
+            } else if (isExit) {
+                cell.classList.add('exit');
             }
-            if (isExit) {
-                cell.classList.add("exit");
-            }
-
+            
             fragment.appendChild(cell);
         }
     }
+    
     boardElement.appendChild(fragment);
 }
 
@@ -146,13 +204,23 @@ function getMetrics() {
     };
 }
 
-function placePieces(level) {
-    const metrics = getMetrics();
-    level.pieces.forEach((definition) => {
-        const piece = { ...definition, element: createPieceElement(definition) };
+function placePieces() {
+    // Réinitialiser les pièces
+    state.pieces.clear();
+    
+    // Créer chaque pièce
+    for (const pieceDef of LEVEL.pieces) {
+        const piece = {
+            ...pieceDef,
+            element: createPieceElement(pieceDef)
+        };
+        
+        // Ajouter la pièce à l'état
         state.pieces.set(piece.id, piece);
-        updatePiecePosition(piece, metrics);
-    });
+        
+        // Positionner la pièce
+        updatePiecePosition(piece);
+    }
 }
 
 function updatePiecePosition(piece, metrics = getMetrics()) {
@@ -212,246 +280,384 @@ function canOccupy(piece, row, col) {
 }
 
 function recordMove(piece, fromRow, fromCol) {
-    state.history.push({ pieceId: piece.id, fromRow, fromCol, toRow: piece.row, toCol: piece.col });
+    state.history.push({ 
+        pieceId: piece.id, 
+        fromRow, 
+        fromCol, 
+        toRow: piece.row, 
+        toCol: piece.col 
+    });
     state.undone = [];
-    moveCounterElement.textContent = String(state.history.length);
+    
+    // Mettre à jour l'interface
+    updateUI();
+}
 
-    const item = document.createElement("li");
-    item.textContent = `${piece.id.toUpperCase()}: (${fromRow}, ${fromCol}) → (${piece.row}, ${piece.col})`;
-    historyListElement.appendChild(item);
-    historyListElement.scrollTop = historyListElement.scrollHeight;
-
-    undoButton.disabled = state.history.length === 0;
-    playbackButton.disabled = state.history.length === 0;
+function updateMoveHistory() {
+    historyListElement.innerHTML = '';
+    state.history.forEach((move, index) => {
+        const li = document.createElement('li');
+        li.textContent = `Move ${index + 1}: ${move.pieceId} to (${move.toRow}, ${move.toCol})`;
+        historyListElement.appendChild(li);
+    });
+    
+    // Faire défiler vers le bas pour voir le dernier mouvement
+    if (historyListElement.lastElementChild) {
+        historyListElement.lastElementChild.scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
 function movePiece(piece, row, col) {
+    // Sauvegarder l'ancienne position
     const fromRow = piece.row;
     const fromCol = piece.col;
+    
+    // Mettre à jour la position de la pièce
     piece.row = row;
     piece.col = col;
+    
+    // Mettre à jour la position visuelle
     updatePiecePosition(piece);
+    
+    // Enregistrer le mouvement
     recordMove(piece, fromRow, fromCol);
+    
+    // Vérifier la victoire
     checkVictory();
+    
+    // Mettre à jour l'interface
+    updateUI();
 }
 
-function undoLastMove() {
-    if (state.victory || state.replaying) {
-        return;
+function handlePointerMove(event) {
+    if (!state.isDragging || !state.draggedPiece) return;
+    
+    event.preventDefault();
+    
+    const piece = state.draggedPiece;
+    const metrics = getMetrics();
+    const cellSize = Math.min(metrics.cellWidth, metrics.cellHeight);
+    
+    // Calculer le déplacement en nombre de cellules
+    const dx = Math.round((event.clientX - state.dragStartX) / cellSize);
+    const dy = Math.round((event.clientY - state.dragStartY) / cellSize);
+    
+    // Calculer la nouvelle position en cellules
+    const newCol = state.originalX + dx;
+    const newRow = state.originalY + dy;
+    
+    // Vérifier si la position est valide
+    if (canOccupy(piece, newRow, newCol)) {
+        // Mettre à jour la position de la pièce
+        piece.row = newRow;
+        piece.col = newCol;
+        updatePiecePosition(piece);
     }
-    const move = state.history.pop();
-    if (!move) {
-        return;
-    }
-    const piece = state.pieces.get(move.pieceId);
-    if (!piece) {
-        return;
-    }
-    piece.row = move.fromRow;
-    piece.col = move.fromCol;
-    updatePiecePosition(piece);
-    state.undone.push(move);
-    moveCounterElement.textContent = String(state.history.length);
-    if (historyListElement.lastElementChild) {
-        historyListElement.removeChild(historyListElement.lastElementChild);
-    }
-    undoButton.disabled = state.history.length === 0;
-    playbackButton.disabled = state.history.length === 0;
 }
 
 function checkVictory() {
-    const goal = [...state.pieces.values()].find((p) => p.type === "d");
-    if (!goal) {
-        return;
-    }
-    const exitRow = state.level.exit.row;
-    const exitColumns = state.level.exit.columns;
-    const insideExit =
-        goal.row + goal.height - 1 === exitRow &&
-        goal.col >= exitColumns[0] &&
-        goal.col + goal.width - 1 <= exitColumns[1];
-    const pastExit = goal.row + goal.height > exitRow;
-
-    if (insideExit && pastExit) {
+    // Vérifier si le jeu est déjà gagné
+    if (state.victory) return;
+    
+    // Trouver la pièce rouge (type 'd')
+    const redPiece = Array.from(state.pieces.values()).find(p => p.type === 'd');
+    if (!redPiece) return;
+    
+    // Vérifier si la pièce rouge est sur la sortie
+    const isOnExit = redPiece.row + redPiece.height - 1 === state.level.exit.row &&
+                    redPiece.col >= state.level.exit.columns[0] &&
+                    redPiece.col + redPiece.width - 1 <= state.level.exit.columns[1];
+    
+    if (isOnExit) {
+        // Marquer la victoire
         state.victory = true;
         stopTimer();
-        victorySummary.textContent = `Solved in ${state.history.length} moves, time ${elapsedTimeElement.textContent}.`;
+        
+        // Afficher le message de victoire
+        const timeElapsed = elapsedTimeElement.textContent;
+        const moves = state.history.length;
+        victorySummary.textContent = `Victoire en ${moves} coups et ${timeElapsed} !`;
+        
+        // Afficher l'overlay de victoire
         victoryOverlay.hidden = false;
+        
+        // Désactiver les contrôles
+        disableAllButtons(true);
+        replayButton.disabled = false;
+        restartButton.disabled = false;
     }
 }
 
-function onPointerDown(event) {
-    if (!(event.target instanceof HTMLElement) || !event.target.classList.contains("piece")) {
-        return;
-    }
-    if (state.victory || state.replaying) {
-        return;
-    }
-
-    const piece = state.pieces.get(event.target.dataset.id || "");
-    if (!piece) {
-        return;
-    }
-
-    event.target.setPointerCapture(event.pointerId);
-    state.dragContext = {
-        pointerId: event.pointerId,
-        piece,
-        originX: event.clientX,
-        originY: event.clientY,
-        baseRow: piece.row,
-        baseCol: piece.col,
-        metrics: getMetrics(),
-    };
+function handlePointerDown(event) {
+    if (state.victory || !event.target.closest('.piece')) return;
+    
+    const pieceElement = event.target.closest('.piece');
+    const pieceId = pieceElement.dataset.id;
+    const piece = state.pieces.get(pieceId);
+    
+    if (!piece) return;
+    
+    event.preventDefault();
+    
+    // Capturer le pointeur pour les événements de déplacement
+    pieceElement.setPointerCapture(event.pointerId);
+    
+    // Sauvegarder la position de départ du glissement
+    state.isDragging = true;
+    state.draggedPiece = piece;
+    state.dragStartX = event.clientX;
+    state.dragStartY = event.clientY;
+    state.originalX = piece.col;
+    state.originalY = piece.row;
+    
+    // Ajouter une classe pour le style pendant le glissement
+    pieceElement.classList.add('dragging');
 }
 
-function onPointerMove(event) {
-    if (!state.dragContext || event.pointerId !== state.dragContext.pointerId) {
+function handlePointerUp(event) {
+    if (!state.isDragging || !state.draggedPiece) {
         return;
     }
-    const { piece, originX, originY, metrics, baseRow, baseCol } = state.dragContext;
-    const deltaX = event.clientX - originX;
-    const deltaY = event.clientY - originY;
-
-    const threshold = Math.min(metrics.cellWidth, metrics.cellHeight) * 0.4;
-    const colShift = Math.round(deltaX / threshold);
-    const rowShift = Math.round(deltaY / threshold);
-
-    let targetRow = baseRow + rowShift;
-    let targetCol = baseCol + colShift;
-
-    if (piece.width > piece.height) {
-        targetRow = baseRow;
-    } else if (piece.height > piece.width) {
-        targetCol = baseCol;
+    
+    event.preventDefault();
+    
+    const piece = state.draggedPiece;
+    const pieceElement = document.querySelector(`.piece[data-id="${piece.id}"]`);
+    
+    // Vérifier si la position a changé
+    if (piece.row !== state.originalY || piece.col !== state.originalX) {
+        // Enregistrer le mouvement
+        recordMove(piece, state.originalY, state.originalX);
+        
+        // Vérifier la victoire
+        checkVictory();
+        
+        // Mettre à jour l'interface
+        updateUI();
     }
-
-    const directionRow = Math.sign(targetRow - piece.row);
-    const directionCol = Math.sign(targetCol - piece.col);
-
-    let currentRow = piece.row;
-    let currentCol = piece.col;
-    let moved = false;
-
-    while (currentRow !== targetRow || currentCol !== targetCol) {
-        const nextRow = currentRow + directionRow;
-        const nextCol = currentCol + directionCol;
-        if (!canOccupy(piece, nextRow, nextCol)) {
-            break;
-        }
-        currentRow = nextRow;
-        currentCol = nextCol;
-        moved = true;
-    }
-
-    if (moved) {
-        piece.row = currentRow;
-        piece.col = currentCol;
-        updatePiecePosition(piece, metrics);
-    }
-}
-
-function onPointerUp(event) {
-    if (!state.dragContext || event.pointerId !== state.dragContext.pointerId) {
-        return;
-    }
-
-    event.target.releasePointerCapture(event.pointerId);
-    const { piece, baseRow, baseCol } = state.dragContext;
-    state.dragContext = null;
-
-    if (piece.row !== baseRow || piece.col !== baseCol) {
-        movePiece(piece, piece.row, piece.col);
-    } else {
-        refreshPieces();
-    }
-}
-
-function setupPointerHandlers() {
-    boardElement.addEventListener("pointerdown", onPointerDown);
-    boardElement.addEventListener("pointermove", onPointerMove);
-    boardElement.addEventListener("pointerup", onPointerUp);
-    boardElement.addEventListener("pointercancel", onPointerUp);
-}
-
-async function playBackMoves() {
-    if (state.history.length === 0 || state.replaying) {
-        return;
-    }
-
-    state.replaying = true;
-    disableAllButtons(true);
-
-    const snapshot = state.history.slice();
-
-    state.pieces.forEach((piece, id) => {
-        const start = snapshot.find((move) => move.pieceId === id);
-        if (start) {
-            piece.row = start.fromRow;
-            piece.col = start.fromCol;
-            updatePiecePosition(piece);
-        }
-    });
-
-    await wait(250);
-
-    for (const move of snapshot) {
-        const piece = state.pieces.get(move.pieceId);
-        if (!piece) {
-            continue;
-        }
-        piece.row = move.toRow;
-        piece.col = move.toCol;
+    
+    // Retirer la classe de style de glissement
+    if (pieceElement) {
+        pieceElement.classList.remove('dragging');
+        
+        // Forcer une mise à jour de la position pour s'assurer qu'elle est alignée sur la grille
         updatePiecePosition(piece);
-        await wait(250);
     }
-
-    disableAllButtons(false);
-    state.replaying = false;
-}
-
-function disableAllButtons(disabled) {
-    [undoButton, resetButton, playbackButton, replayButton, restartButton].forEach((button) => {
-        if (button) {
-            button.disabled = disabled;
-        }
-    });
+    
+    // Réinitialiser l'état de glisser-déposer
+    state.isDragging = false;
+    state.draggedPiece = null;
+    
+    // Libérer la capture du pointeur
+    if (event.target.releasePointerCapture) {
+        event.target.releasePointerCapture(event.pointerId);
+    }
 }
 
 function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function loadLevel(level) {
+function loadLevel() {
+    // Arrêter tout ce qui est en cours
     stopTimer();
+    
+    // Réinitialiser complètement l'état
     resetState();
-    state.level = level;
-    createBoard(level);
-    placePieces(level);
+    
+    // Mettre à jour le niveau
+    state.level = LEVEL;
+    
+    // Recréer le plateau et les pièces
+    createBoard();
+    placePieces();
+    
+    // Redémarrer le chronomètre
+    state.startTime = performance.now();
     startTimer();
+    
+    // Activer/désactiver les boutons appropriés
     resetButton.disabled = false;
-    replayButton.disabled = state.history.length === 0;
+    replayButton.disabled = true;
 }
 
-function setupControls() {
-    undoButton.addEventListener("click", undoLastMove);
-    resetButton.addEventListener("click", () => loadLevel(state.level));
-    restartButton.addEventListener("click", () => {
-        victoryOverlay.hidden = true;
-        loadLevel(state.level);
+// Variable pour éviter d'ajouter les écouteurs plusieurs fois
+let listenersInitialized = false;
+
+function setupEventListeners() {
+    // Ne configurer les écouteurs qu'une seule fois
+    if (listenersInitialized) return;
+    listenersInitialized = true;
+    
+    // Gestion des clics sur les boutons
+    undoButton.addEventListener('click', handleUndo);
+    resetButton.addEventListener('click', handleReset);
+    replayButton.addEventListener('click', handleReplay);
+    restartButton.addEventListener('click', handleRestart);
+    playbackButton.addEventListener('click', handleReplay);
+    
+    // Gestion des événements de glisser-déposer
+    boardElement.addEventListener('pointerdown', handlePointerDown);
+    boardElement.addEventListener('pointermove', handlePointerMove);
+    boardElement.addEventListener('pointerup', handlePointerUp);
+    boardElement.addEventListener('pointercancel', handlePointerUp);
+    
+    // Empêcher le comportement par défaut du navigateur
+    boardElement.addEventListener('contextmenu', (e) => e.preventDefault());
+    
+    // Gérer le redimensionnement de la fenêtre
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            if (!state.isDragging) {
+                refreshPieces();
+            }
+        }, 100);
     });
-    playbackButton.addEventListener("click", playBackMoves);
-    replayButton.addEventListener("click", () => {
-        victoryOverlay.hidden = true;
-        playBackMoves();
+}
+
+// Gestionnaires d'événements
+function handleUndo() {
+    if (state.victory || state.history.length === 0) return;
+    
+    const lastMove = state.history.pop();
+    if (!lastMove) return;
+    
+    const piece = state.pieces.get(lastMove.pieceId);
+    initGame();
+    
+    // Réappliquer les mouvements
+    let delay = 0;
+    const moves = [...state.history];
+    
+    moves.forEach((move, index) => {
+        setTimeout(() => {
+            const piece = state.pieces.get(move.pieceId);
+            if (piece) {
+                piece.row = move.toRow;
+                piece.col = move.toCol;
+                updatePiecePosition(piece);
+                
+                // Si c'est le dernier mouvement, vérifier la victoire
+                if (index === moves.length - 1) {
+                    checkVictory();
+                }
+            }
+        }, 300 * (index + 1));
     });
-    window.addEventListener("resize", refreshPieces);
+    
+    // Réactiver les contrôles après la relecture
+    setTimeout(() => {
+        disableAllButtons(false);
+    }, 300 * (moves.length + 1));
 }
 
-function init() {
-    loadLevel(state.level);
-    setupPointerHandlers();
-    setupControls();
+function handleRestart() {
+    // Réinitialiser l'état de victoire
+    state.victory = false;
+    
+    // Cacher l'overlay de victoire
+    victoryOverlay.hidden = true;
+    
+    // Réinitialiser le niveau
+    loadLevel();
+    
+    // Forcer la mise à jour de l'interface
+    updateUI();
 }
 
-init();
+function handleReset() {
+    if (confirm("Êtes-vous sûr de vouloir réinitialiser le niveau ?")) {
+        loadLevel();
+    }
+}
+
+async function handleReplay() {
+    if (state.history.length === 0) return;
+    
+    // Sauvegarder l'état actuel
+    const currentState = {
+        pieces: new Map(state.pieces),
+        history: [...state.history],
+        victory: state.victory
+    };
+    
+    try {
+        // Désactiver les boutons pendant la relecture
+        disableAllButtons(true);
+        
+        // Cacher l'overlay de victoire s'il est affiché
+        victoryOverlay.hidden = true;
+        state.victory = false;
+        
+        // Réinitialiser le plateau
+        await loadLevel();
+        
+        // Rejouer chaque mouvement avec un délai
+        for (const move of currentState.history) {
+            const piece = state.pieces.get(move.pieceId);
+            if (piece) {
+                // Mettre à jour la position de la pièce
+                piece.row = move.toRow;
+                piece.col = move.toCol;
+                updatePiecePosition(piece);
+                
+                // Mettre à jour l'historique visuel
+                state.history.push(move);
+                updateUI();
+                
+                // Petit délai pour la lisibilité
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+        }
+        
+        // Vérifier la victoire si nécessaire
+        if (currentState.victory) {
+            state.victory = true;
+            stopTimer();
+            const timeElapsed = elapsedTimeElement.textContent;
+            victorySummary.textContent = `Victoire en ${state.history.length} coups et ${timeElapsed} !`;
+            victoryOverlay.hidden = false;
+        }
+    } finally {
+        // Réactiver les boutons
+        disableAllButtons(false);
+        replayButton.disabled = state.history.length === 0;
+    }
+}
+
+// Initialisation du jeu
+function initGame() {
+    // Ajouter les écouteurs d'événements (une seule fois)
+    setupEventListeners();
+    
+    // Masquer l'overlay de victoire avant toute initialisation
+    victoryOverlay.hidden = true;
+    
+    // Réinitialiser complètement l'état
+    resetState();
+    
+    // Définir le niveau
+    state.level = LEVEL;
+    
+    // Créer le plateau
+    createBoard();
+    
+    // Placer les pièces
+    placePieces();
+    
+    // Démarrer le chronomètre
+    state.startTime = performance.now();
+    startTimer();
+    
+    // Mettre à jour l'interface
+    updateUI();
+}
+
+// Démarrer le jeu au chargement de la page
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGame);
+} else {
+    initGame();
+}
