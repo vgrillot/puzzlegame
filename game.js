@@ -32,7 +32,8 @@ const initialState = {
     dragStartY: 0,
     victory: false,
     startTime: null,
-    timer: null
+    timer: null,
+    isDragging: false
 };
 
 // Récupération des éléments DOM
@@ -74,11 +75,6 @@ function stopTimer() {
 function updateUI() {
     // Mettre à jour le compteur de mouvements
     moveCounterElement.textContent = state.history.length;
-    
-    // Activer/désactiver les boutons en fonction de l'état
-    undoButton.disabled = state.victory || state.history.length === 0 || state.isDragging;
-    playbackButton.disabled = state.victory || state.history.length === 0 || state.isDragging;
-    resetButton.disabled = false;
     
     // Mettre à jour l'historique des mouvements
     updateMoveHistory();
@@ -316,6 +312,10 @@ function recordMove(piece, fromRow, fromCol) {
     });
     state.undone = [];
     
+    // Activer explicitement le bouton undo
+    undoButton.disabled = false;
+    playbackButton.disabled = false;
+    
     // Mettre à jour l'interface
     updateUI();
 }
@@ -428,13 +428,17 @@ function checkVictory() {
 }
 
 function handlePointerDown(event) {
-    if (state.victory || !event.target.closest('.piece')) return;
+    if (state.victory || !event.target.closest('.piece')) {
+        return;
+    }
     
     const pieceElement = event.target.closest('.piece');
     const pieceId = pieceElement.dataset.id;
     const piece = state.pieces.get(pieceId);
     
-    if (!piece) return;
+    if (!piece) {
+        return;
+    }
     
     event.preventDefault();
     
@@ -448,6 +452,8 @@ function handlePointerDown(event) {
     state.dragStartY = event.clientY;
     state.originalX = piece.col;
     state.originalY = piece.row;
+    state.startCol = piece.col;  // Position de départ réelle (ne change jamais)
+    state.startRow = piece.row;  // Position de départ réelle (ne change jamais)
     
     // Ajouter une classe pour le style pendant le glissement
     pieceElement.classList.add('dragging');
@@ -463,18 +469,6 @@ function handlePointerUp(event) {
     const piece = state.draggedPiece;
     const pieceElement = document.querySelector(`.piece[data-id="${piece.id}"]`);
     
-    // Vérifier si la position a changé
-    if (piece.row !== state.originalY || piece.col !== state.originalX) {
-        // Enregistrer le mouvement
-        recordMove(piece, state.originalY, state.originalX);
-        
-        // Vérifier la victoire
-        checkVictory();
-        
-        // Mettre à jour l'interface
-        updateUI();
-    }
-    
     // Retirer la classe de style de glissement
     if (pieceElement) {
         pieceElement.classList.remove('dragging');
@@ -483,13 +477,26 @@ function handlePointerUp(event) {
         updatePiecePosition(piece);
     }
     
-    // Réinitialiser l'état de glisser-déposer
+    // Réinitialiser l'état de glisser-déposer AVANT de mettre à jour l'UI
     state.isDragging = false;
+    const draggedPiece = state.draggedPiece;
     state.draggedPiece = null;
     
     // Libérer la capture du pointeur
     if (event.target.releasePointerCapture) {
         event.target.releasePointerCapture(event.pointerId);
+    }
+    
+    // Vérifier si la position a changé
+    if (piece.row !== state.startRow || piece.col !== state.startCol) {
+        // Enregistrer le mouvement
+        recordMove(piece, state.startRow, state.startCol);
+        
+        // Vérifier la victoire
+        checkVictory();
+        
+        // Mettre à jour l'interface
+        updateUI();
     }
 }
 
@@ -560,36 +567,29 @@ function setupEventListeners() {
 function handleUndo() {
     if (state.victory || state.history.length === 0) return;
     
+    // Récupérer le dernier mouvement
     const lastMove = state.history.pop();
     if (!lastMove) return;
     
+    // Récupérer la pièce concernée
     const piece = state.pieces.get(lastMove.pieceId);
-    initGame();
+    if (!piece) return;
     
-    // Réappliquer les mouvements
-    let delay = 0;
-    const moves = [...state.history];
+    // Restaurer la position précédente
+    piece.row = lastMove.fromRow;
+    piece.col = lastMove.fromCol;
     
-    moves.forEach((move, index) => {
-        setTimeout(() => {
-            const piece = state.pieces.get(move.pieceId);
-            if (piece) {
-                piece.row = move.toRow;
-                piece.col = move.toCol;
-                updatePiecePosition(piece);
-                
-                // Si c'est le dernier mouvement, vérifier la victoire
-                if (index === moves.length - 1) {
-                    checkVictory();
-                }
-            }
-        }, 300 * (index + 1));
-    });
+    // Mettre à jour la position visuelle
+    updatePiecePosition(piece);
     
-    // Réactiver les contrôles après la relecture
-    setTimeout(() => {
-        disableAllButtons(false);
-    }, 300 * (moves.length + 1));
+    // Désactiver le bouton undo s'il n'y a plus de mouvements
+    if (state.history.length === 0) {
+        undoButton.disabled = true;
+        playbackButton.disabled = true;
+    }
+    
+    // Mettre à jour l'interface
+    updateUI();
 }
 
 function handleRestart() {
