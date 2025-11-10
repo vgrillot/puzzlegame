@@ -365,16 +365,83 @@ function handlePointerMove(event) {
     const metrics = getMetrics();
     const cellSize = Math.min(metrics.cellWidth, metrics.cellHeight);
     
-    // Calculer le déplacement en nombre de cellules depuis la position originale
-    const dx = Math.round((event.clientX - state.dragStartX) / cellSize);
-    const dy = Math.round((event.clientY - state.dragStartY) / cellSize);
+    // Calculer le déplacement brut en pixels
+    const rawDx = event.clientX - state.dragStartX;
+    const rawDy = event.clientY - state.dragStartY;
+    const absDx = Math.abs(rawDx);
+    const absDy = Math.abs(rawDy);
     
-    // Calculer la nouvelle position en cellules (toujours depuis l'origine du drag)
+    // Calculer le déplacement en nombre de cellules
+    const cellDx = Math.round(rawDx / cellSize);
+    const cellDy = Math.round(rawDy / cellSize);
+    
+    // Vérifier si on est proche d'une position de cellule complète (alignée sur la grille)
+    const remainderDx = Math.abs(rawDx - cellDx * cellSize);
+    const remainderDy = Math.abs(rawDy - cellDy * cellSize);
+    const isNearGridPosition = remainderDx < 10 && remainderDy < 10;
+    
+    // Réinitialiser la direction si on est revenu à une position de grille complète
+    if (isNearGridPosition && state.dragDirection) {
+        state.dragDirection = null;
+    }
+    
+    // Déterminer la direction du mouvement dès le premier pixel
+    let constrainedDx = 0;
+    let constrainedDy = 0;
+    
+    // Si on n'a pas encore déterminé la direction, la détecter maintenant
+    if (!state.dragDirection) {
+        // Seuil minimal pour détecter la direction (2 pixels)
+        if (absDx > 2 || absDy > 2) {
+            if (absDx > absDy) {
+                // Mouvement horizontal détecté
+                if (state.allowedMoves.horizontal) {
+                    state.dragDirection = 'horizontal';
+                }
+            } else {
+                // Mouvement vertical détecté
+                if (state.allowedMoves.vertical) {
+                    state.dragDirection = 'vertical';
+                }
+            }
+        }
+    }
+    
+    // Appliquer la contrainte selon la direction détectée
+    if (state.dragDirection === 'horizontal') {
+        constrainedDx = rawDx;
+        constrainedDy = 0;
+        
+        // Limiter le mouvement aux directions légales
+        if (constrainedDx < 0 && !state.allowedMoves.left) {
+            constrainedDx = 0;
+        } else if (constrainedDx > 0 && !state.allowedMoves.right) {
+            constrainedDx = 0;
+        }
+    } else if (state.dragDirection === 'vertical') {
+        constrainedDx = 0;
+        constrainedDy = rawDy;
+        
+        // Limiter le mouvement aux directions légales
+        if (constrainedDy < 0 && !state.allowedMoves.up) {
+            constrainedDy = 0;
+        } else if (constrainedDy > 0 && !state.allowedMoves.down) {
+            constrainedDy = 0;
+        }
+    }
+    
+    // Recalculer le déplacement en cellules avec les contraintes appliquées
+    const dx = Math.round(constrainedDx / cellSize);
+    const dy = Math.round(constrainedDy / cellSize);
+    
+    // Calculer la nouvelle position en cellules
     const newCol = state.originalX + dx;
     const newRow = state.originalY + dy;
     
     // Ne rien faire si la position n'a pas changé
     if (newRow === piece.row && newCol === piece.col) {
+        // Appliquer le déplacement visuel même sans changement de cellule
+        applyVisualDrag(piece, constrainedDx, constrainedDy, metrics);
         return;
     }
     
@@ -390,8 +457,13 @@ function handlePointerMove(event) {
         state.dragStartY = event.clientY;
         state.originalX = newCol;
         state.originalY = newRow;
+        
+        // Recalculer les mouvements autorisés depuis la nouvelle position
+        state.allowedMoves = detectAllowedMoves(piece);
+    } else {
+        // Mouvement bloqué : appliquer le déplacement visuel jusqu'à la limite
+        applyVisualDrag(piece, constrainedDx, constrainedDy, metrics);
     }
-    // Si le mouvement n'est pas valide, la pièce reste à sa position actuelle (pas de bounce)
 }
 
 function checkVictory() {
@@ -427,6 +499,37 @@ function checkVictory() {
     }
 }
 
+function detectAllowedMoves(piece) {
+    // Vérifier chaque mouvement légal possible
+    const canMoveLeft = canOccupy(piece, piece.row, piece.col - 1);
+    const canMoveRight = canOccupy(piece, piece.row, piece.col + 1);
+    const canMoveUp = canOccupy(piece, piece.row - 1, piece.col);
+    const canMoveDown = canOccupy(piece, piece.row + 1, piece.col);
+    
+    return {
+        left: canMoveLeft,
+        right: canMoveRight,
+        up: canMoveUp,
+        down: canMoveDown,
+        horizontal: canMoveLeft || canMoveRight,
+        vertical: canMoveUp || canMoveDown
+    };
+}
+
+function applyVisualDrag(piece, dx, dy, metrics) {
+    // Calculer la position de base de la pièce
+    const { cellWidth, cellHeight, gap, paddingX, paddingY } = metrics;
+    const baseX = paddingX + piece.col * (cellWidth + gap);
+    const baseY = paddingY + piece.row * (cellHeight + gap);
+    const width = piece.width * cellWidth + (piece.width - 1) * gap;
+    const height = piece.height * cellHeight + (piece.height - 1) * gap;
+    
+    // Appliquer le déplacement visuel
+    piece.element.style.transform = `translate(${baseX + dx}px, ${baseY + dy}px)`;
+    piece.element.style.width = `${width}px`;
+    piece.element.style.height = `${height}px`;
+}
+
 function handlePointerDown(event) {
     if (state.victory || !event.target.closest('.piece')) {
         return;
@@ -445,6 +548,9 @@ function handlePointerDown(event) {
     // Capturer le pointeur pour les événements de déplacement
     pieceElement.setPointerCapture(event.pointerId);
     
+    // Détecter les mouvements légaux possibles
+    const allowedMoves = detectAllowedMoves(piece);
+    
     // Sauvegarder la position de départ du glissement
     state.isDragging = true;
     state.draggedPiece = piece;
@@ -454,6 +560,8 @@ function handlePointerDown(event) {
     state.originalY = piece.row;
     state.startCol = piece.col;  // Position de départ réelle (ne change jamais)
     state.startRow = piece.row;  // Position de départ réelle (ne change jamais)
+    state.allowedMoves = allowedMoves;
+    state.dragDirection = null;  // Direction sera détectée au premier mouvement
     
     // Ajouter une classe pour le style pendant le glissement
     pieceElement.classList.add('dragging');
@@ -481,6 +589,8 @@ function handlePointerUp(event) {
     state.isDragging = false;
     const draggedPiece = state.draggedPiece;
     state.draggedPiece = null;
+    state.dragDirection = null;
+    state.allowedMoves = null;
     
     // Libérer la capture du pointeur
     if (event.target.releasePointerCapture) {
