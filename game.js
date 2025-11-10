@@ -256,6 +256,11 @@ function canOccupy(piece, row, col) {
                 c >= state.level.exit.columns[0] &&
                 c <= state.level.exit.columns[1];
 
+            // Seule la pièce rouge (type 'd') peut aller sur la sortie
+            if (isExit && piece.type !== 'd') {
+                return false;
+            }
+
             if (isBorder && !isExit) {
                 return false;
             }
@@ -277,6 +282,28 @@ function canOccupy(piece, row, col) {
     }
 
     return true;
+}
+
+// Vérifie si un mouvement est valide (case par case, orthogonal uniquement)
+function isValidMove(piece, fromRow, fromCol, toRow, toCol) {
+    // Calculer la différence de position
+    const deltaRow = toRow - fromRow;
+    const deltaCol = toCol - fromCol;
+    
+    // Le mouvement doit être orthogonal (pas diagonal)
+    if (deltaRow !== 0 && deltaCol !== 0) {
+        return false;
+    }
+    
+    // Le mouvement doit être d'exactement une case dans une direction
+    const totalMove = Math.abs(deltaRow) + Math.abs(deltaCol);
+    if (totalMove !== 1) {
+        return false;
+    }
+    
+    // Vérifier que la destination est libre avec canOccupy
+    // (qui vérifie déjà les collisions, les bordures et la sortie)
+    return canOccupy(piece, toRow, toCol);
 }
 
 function recordMove(piece, fromRow, fromCol) {
@@ -338,21 +365,33 @@ function handlePointerMove(event) {
     const metrics = getMetrics();
     const cellSize = Math.min(metrics.cellWidth, metrics.cellHeight);
     
-    // Calculer le déplacement en nombre de cellules
+    // Calculer le déplacement en nombre de cellules depuis la position originale
     const dx = Math.round((event.clientX - state.dragStartX) / cellSize);
     const dy = Math.round((event.clientY - state.dragStartY) / cellSize);
     
-    // Calculer la nouvelle position en cellules
+    // Calculer la nouvelle position en cellules (toujours depuis l'origine du drag)
     const newCol = state.originalX + dx;
     const newRow = state.originalY + dy;
     
-    // Vérifier si la position est valide
-    if (canOccupy(piece, newRow, newCol)) {
-        // Mettre à jour la position de la pièce
+    // Ne rien faire si la position n'a pas changé
+    if (newRow === piece.row && newCol === piece.col) {
+        return;
+    }
+    
+    // Vérifier si on peut bouger d'une case depuis la position actuelle
+    if (isValidMove(piece, piece.row, piece.col, newRow, newCol)) {
+        // Mouvement valide : mettre à jour la position
         piece.row = newRow;
         piece.col = newCol;
         updatePiecePosition(piece);
+        
+        // Mettre à jour la position de référence pour le prochain mouvement
+        state.dragStartX = event.clientX;
+        state.dragStartY = event.clientY;
+        state.originalX = newCol;
+        state.originalY = newRow;
     }
+    // Si le mouvement n'est pas valide, la pièce reste à sa position actuelle (pas de bounce)
 }
 
 function checkVictory() {
