@@ -27,24 +27,30 @@ en pure js ou presque, canvas, vanilla.js, alpine.js
 - Offer a fast replay of the recorded moves so players can review the solution.
 - Apply a shiny, polished visual style for the board, pieces, and UI elements.
 
+## Visual improvements
+
+- Border walls should be thinner on mobile devices to save screen space.
+- Exit cells (marked as "f" in level data) should have a light red tint to visually indicate where the red piece needs to go.
+
 # presentation du jeu
 
 ## plateau
 
 voici le plateau vide:
 
-++++++
-+....+
-+....+
-+....+
-+....+
-+....+
-++  ++
+....
+....
+....
+....
+....
+ ff  
+ ff
 
 ### légende:
-"+" : un mur bloquant, fixe, infranchissable
+"+" : un mur bloquant, fixe, infranchissable (plus fin sur mobile pour économiser l'espace)
 "." : une case vide où un peut y déplacer une pièce
-" " : un trou dans le mur qui permet de sortir une pièce
+"f" : un trou dans le mur qui permet de sortir une pièce (affiché avec une teinte rouge légère pour indiquer la destination de la pièce rouge)
+" " : un espace vide inatteignable
 
 ## les pièces:
 
@@ -54,13 +60,13 @@ a
 elle est bleue
 
 ### une pièce de 2x1 horizontale
-bb
+hh
 
 elle est jaune
 
 ### une pièce de 1x2 verticale
-c
-c
+v
+v
 
 elle est orange
 
@@ -78,13 +84,13 @@ c'est cette pièce qui peut sortir par le bas du plateau via les cellules " "
 ## position de départ:
 voici les pièces en début de la partie:
 
-++++++
-+cddc+
-+cddc+
-+.bb.+
-+caac+
-+caac+
-++  ++
+vddv
+vddv
+.hh.
+vaav
+vaav
+ ff 
+ ff
 
 
 # règles du jeu

@@ -76,8 +76,9 @@ body {
 
 .board {
     position: relative;
-    width: min(540px, 75vw);
-    height: min(540px, 75vw);
+    width: 100%;
+    max-width: min(540px, 75vh);
+    aspect-ratio: 1 / 1;
     margin: 0 auto;
     background: var(--board-bg);
     border-radius: calc(var(--border-radius) * 1.1);
@@ -99,18 +100,23 @@ body {
     justify-content: center;
     position: relative;
     transition: transform var(--transition), box-shadow var(--transition);
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    height: 100%;
 }
 
 .wall {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.12));
-    box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    opacity: 0.3;
 }
 
 /* Thinner walls on mobile */
 @media (max-width: 640px) {
     .wall {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.08));
-        box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.4);
+        background: rgba(255, 255, 255, 0.02);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        opacity: 0.2;
     }
 }
 
@@ -140,18 +146,22 @@ body {
         inset 0 3px 0 rgba(255, 255, 255, 0.3);
 }
 
+/* Pièce bleue 1x1 */
 .piece[data-type="a"] {
     background: linear-gradient(135deg, #00f0ff, #0b9dff);
 }
 
-.piece[data-type="b"] {
+/* Pièce jaune horizontale 2x1 */
+.piece[data-type="h"] {
     background: linear-gradient(135deg, #ffe066, #ffb347);
 }
 
-.piece[data-type="c"] {
+/* Pièce orange verticale 1x2 */
+.piece[data-type="v"] {
     background: linear-gradient(135deg, #ff8a4c, #ff5f6d);
 }
 
+/* Pièce rouge 2x2 */
 .piece[data-type="d"] {
     background: linear-gradient(135deg, #ff4444, #ff0059);
     box-shadow:

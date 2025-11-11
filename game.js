@@ -1,27 +1,139 @@
-// Configuration du niveau
-const LEVEL = {
-    id: "classic",
-    name: "Classic Escape",
-    rows: 7,  // Augmenté de 6 à 7 pour correspondre au JSON
-    cols: 6,
-    exit: { row: 6, columns: [2, 3] },  // Ajusté pour la 7ème ligne
-    pieces: [
-        // Pièce principale (rouge)
-        { id: "d", type: "d", row: 1, col: 2, width: 2, height: 2 },
-        // Pièce horizontale
-        { id: "b1", type: "b", row: 3, col: 2, width: 2, height: 1 },
-        // Pièces verticales
-        { id: "c1", type: "c", row: 1, col: 1, width: 1, height: 2 },
-        { id: "c2", type: "c", row: 1, col: 4, width: 1, height: 2 },
-        { id: "c3", type: "c", row: 4, col: 1, width: 1, height: 2 },  // Ajusté pour commencer à la ligne 4
-        { id: "c4", type: "c", row: 4, col: 4, width: 1, height: 2 },  // Ajusté pour commencer à la ligne 4
-        // Petits carrés
-        { id: "a1", type: "a", row: 4, col: 2, width: 1, height: 1 },
-        { id: "a2", type: "a", row: 4, col: 3, width: 1, height: 1 },
-        { id: "a3", type: "a", row: 5, col: 2, width: 1, height: 1 },  // Déplacé à la ligne 5
-        { id: "a4", type: "a", row: 5, col: 3, width: 1, height: 1 }   // Déplacé à la ligne 5
-    ]
-};
+// Variable pour stocker le niveau actuel
+let currentLevel = null;
+
+// Fonction pour parser un niveau depuis le format JSON
+function parseLevel(levelData) {
+    const grid = levelData.grid;
+    const rows = grid.length;
+    const cols = grid[0].length;
+    
+    // Structures pour stocker les informations extraites
+    const pieces = [];
+    let exit = null;
+    const visited = new Set();
+    const pieceCounters = { v: 0, h: 0, d: 0, a: 0 };
+    
+    // Scanner la grille pour trouver les pièces et la sortie
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            const cell = grid[row][col];
+            const key = `${row},${col}`;
+            
+            // Ignorer les cellules déjà visitées
+            if (visited.has(key)) continue;
+            
+            // Détecter les sorties
+            if (cell === 'f') {
+                if (!exit) {
+                    exit = { row, columns: [col, col] };
+                } else {
+                    // Mettre à jour la ligne de sortie (prendre la plus basse)
+                    exit.row = Math.max(exit.row, row);
+                    // Étendre la plage de colonnes
+                    exit.columns[0] = Math.min(exit.columns[0], col);
+                    exit.columns[1] = Math.max(exit.columns[1], col);
+                }
+                visited.add(key);
+                continue;
+            }
+            
+            // Ignorer les cases vides et les espaces
+            if (cell === '.' || cell === ' ') {
+                visited.add(key);
+                continue;
+            }
+            
+            // Détecter les pièces
+            if (cell === 'v' || cell === 'h' || cell === 'd' || cell === 'a') {
+                const piece = detectPiece(grid, row, col, cell, visited);
+                if (piece) {
+                    pieceCounters[cell]++;
+                    piece.id = cell === 'd' ? 'd' : `${cell}${pieceCounters[cell]}`;
+                    pieces.push(piece);
+                }
+            }
+        }
+    }
+    
+    return {
+        id: levelData.id,
+        name: levelData.name,
+        rows,
+        cols,
+        exit,
+        pieces,
+        grid
+    };
+}
+
+// Fonction pour détecter une pièce à partir d'une cellule
+function detectPiece(grid, startRow, startCol, type, visited) {
+    const rows = grid.length;
+    const cols = grid[0].length;
+    
+    // Vérifier la taille de la pièce selon son type
+    let width = 1;
+    let height = 1;
+    
+    if (type === 'v') {
+        // Pièce verticale: 1x2
+        width = 1;
+        height = 2;
+        
+        // Vérifier si la pièce est complète
+        if (startRow + 1 < rows && grid[startRow + 1][startCol] === 'v') {
+            // Marquer les cellules comme visitées
+            visited.add(`${startRow},${startCol}`);
+            visited.add(`${startRow + 1},${startCol}`);
+        } else {
+            return null;
+        }
+    } else if (type === 'h') {
+        // Pièce horizontale: 2x1
+        width = 2;
+        height = 1;
+        
+        // Vérifier si la pièce est complète
+        if (startCol + 1 < cols && grid[startRow][startCol + 1] === 'h') {
+            // Marquer les cellules comme visitées
+            visited.add(`${startRow},${startCol}`);
+            visited.add(`${startRow},${startCol + 1}`);
+        } else {
+            return null;
+        }
+    } else if (type === 'd') {
+        // Pièce 2x2
+        width = 2;
+        height = 2;
+        
+        // Vérifier si la pièce est complète
+        if (startRow + 1 < rows && startCol + 1 < cols &&
+            grid[startRow][startCol + 1] === 'd' &&
+            grid[startRow + 1][startCol] === 'd' &&
+            grid[startRow + 1][startCol + 1] === 'd') {
+            // Marquer les cellules comme visitées
+            visited.add(`${startRow},${startCol}`);
+            visited.add(`${startRow},${startCol + 1}`);
+            visited.add(`${startRow + 1},${startCol}`);
+            visited.add(`${startRow + 1},${startCol + 1}`);
+        } else {
+            return null;
+        }
+    } else if (type === 'a') {
+        // Pièce 1x1
+        width = 1;
+        height = 1;
+        visited.add(`${startRow},${startCol}`);
+    }
+    
+    return {
+        type,
+        row: startRow,
+        col: startCol,
+        width,
+        height
+    };
+}
 
 // État initial du jeu
 const initialState = {
@@ -137,31 +249,31 @@ function createBoard() {
     boardElement.innerHTML = '';
     
     // Définir la grille CSS
-    boardElement.style.setProperty('--rows', LEVEL.rows);
-    boardElement.style.setProperty('--cols', LEVEL.cols);
+    boardElement.style.setProperty('--rows', currentLevel.rows);
+    boardElement.style.setProperty('--cols', currentLevel.cols);
     
     // Créer les cellules du plateau
     const fragment = document.createDocumentFragment();
+    const grid = currentLevel.grid;
     
-    for (let row = 0; row < LEVEL.rows; row++) {
-        for (let col = 0; col < LEVEL.cols; col++) {
+    for (let row = 0; row < currentLevel.rows; row++) {
+        for (let col = 0; col < currentLevel.cols; col++) {
             const cell = document.createElement('div');
             cell.className = 'cell';
             
-            // Vérifier si c'est un mur ou une sortie en fonction de la grille
-            const isWall = (row === 0) ||  // Mur du haut
-                          (col === 0) ||   // Mur de gauche
-                          (col === LEVEL.cols - 1) ||  // Mur de droite
-                          (row === LEVEL.rows - 1 && (col === 0 || col === 1 || col === 4 || col === 5));  // Mur du bas avec sortie au milieu
+            const gridCell = grid[row][col];
             
-            const isExit = row === LEVEL.exit.row && 
-                          col >= LEVEL.exit.columns[0] && 
-                          col <= LEVEL.exit.columns[1];
-            
-            if (isWall && !isExit) {
+            // Déterminer le type de cellule selon le caractère dans la grille
+            if (gridCell === ' ') {
+                // Espace vide (inatteignable)
                 cell.classList.add('wall');
-            } else if (isExit) {
+            } else if (gridCell === 'f') {
+                // Sortie
                 cell.classList.add('exit');
+            } else if (gridCell === '.') {
+                // Case vide jouable - pas de classe spéciale
+            } else {
+                // Pièce - sera dessinée par dessus, pas de classe spéciale
             }
             
             fragment.appendChild(cell);
@@ -204,8 +316,8 @@ function placePieces() {
     // Réinitialiser les pièces
     state.pieces.clear();
     
-    // Créer chaque pièce
-    for (const pieceDef of LEVEL.pieces) {
+    // Créer chaque pièce depuis le niveau parsé
+    for (const pieceDef of currentLevel.pieces) {
         const piece = {
             ...pieceDef,
             element: createPieceElement(pieceDef)
@@ -237,6 +349,7 @@ function refreshPieces() {
 }
 
 function canOccupy(piece, row, col) {
+    // Vérifier les limites du plateau
     if (row < 0 || col < 0) {
         return false;
     }
@@ -244,23 +357,33 @@ function canOccupy(piece, row, col) {
         return false;
     }
 
+    const grid = state.level.grid;
+
+    // Vérifier chaque cellule que la pièce occuperait
     for (let r = row; r < row + piece.height; r += 1) {
         for (let c = col; c < col + piece.width; c += 1) {
-            const isBorder = r === 0 || c === 0 || r === state.level.rows - 1 || c === state.level.cols - 1;
-            const isExit =
-                r === state.level.exit.row &&
-                c >= state.level.exit.columns[0] &&
-                c <= state.level.exit.columns[1];
-
-            // Seule la pièce rouge (type 'd') peut aller sur la sortie
-            if (isExit && piece.type !== 'd') {
-                return false;
+            const gridCell = grid[r][c];
+            
+            // Vérifier si c'est un mur (espace vide ' ')
+            if (gridCell === ' ') {
+                // Seule la pièce rouge peut aller sur les espaces de sortie
+                if (piece.type !== 'd') {
+                    return false;
+                }
             }
-
-            if (isBorder && !isExit) {
-                return false;
+            
+            // Vérifier si c'est une sortie ('f')
+            if (gridCell === 'f') {
+                // Seule la pièce rouge peut aller sur la sortie
+                if (piece.type !== 'd') {
+                    return false;
+                }
             }
-
+            
+            // Les cases vides '.' et les positions de pièces (v, h, d, a) sont accessibles
+            // Les pièces elles-mêmes seront vérifiées ci-dessous pour les collisions
+            
+            // Vérifier les collisions avec d'autres pièces
             for (const other of state.pieces.values()) {
                 if (other.id === piece.id) {
                     continue;
@@ -614,15 +737,38 @@ function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function loadLevel() {
+async function loadLevel(levelId = 'classic') {
     // Arrêter tout ce qui est en cours
     stopTimer();
+    
+    // Charger le fichier JSON si ce n'est pas déjà fait
+    if (!currentLevel) {
+        try {
+            const response = await fetch('levels.json');
+            const data = await response.json();
+            const levelData = data.levels.find(l => l.id === levelId);
+            
+            if (!levelData) {
+                throw new Error(`Level ${levelId} not found`);
+            }
+            
+            // Parser le niveau
+            currentLevel = parseLevel(levelData);
+            console.log('Level loaded successfully:', currentLevel);
+            console.log('Board size:', currentLevel.rows, 'x', currentLevel.cols);
+            console.log('Pieces detected:', currentLevel.pieces.length);
+            console.log('Exit position:', currentLevel.exit);
+        } catch (error) {
+            console.error('Failed to load level:', error);
+            return;
+        }
+    }
     
     // Réinitialiser complètement l'état
     resetState();
     
     // Mettre à jour le niveau
-    state.level = LEVEL;
+    state.level = currentLevel;
     
     // Recréer le plateau et les pièces
     createBoard();
@@ -726,11 +872,8 @@ async function handleReplay() {
     if (state.history.length === 0) return;
     
     // Sauvegarder l'état actuel
-    const currentState = {
-        pieces: new Map(state.pieces),
-        history: [...state.history],
-        victory: state.victory
-    };
+    const savedHistory = [...state.history];
+    const savedVictory = state.victory;
     
     try {
         // Désactiver les boutons pendant la relecture
@@ -740,11 +883,17 @@ async function handleReplay() {
         victoryOverlay.hidden = true;
         state.victory = false;
         
-        // Réinitialiser le plateau
-        await loadLevel();
+        // Réinitialiser le plateau (sans recharger le JSON)
+        const tempLevel = currentLevel;
+        currentLevel = null;
+        resetState();
+        currentLevel = tempLevel;
+        state.level = currentLevel;
+        createBoard();
+        placePieces();
         
         // Rejouer chaque mouvement avec un délai
-        for (const move of currentState.history) {
+        for (const move of savedHistory) {
             const piece = state.pieces.get(move.pieceId);
             if (piece) {
                 // Mettre à jour la position de la pièce
@@ -762,7 +911,7 @@ async function handleReplay() {
         }
         
         // Vérifier la victoire si nécessaire
-        if (currentState.victory) {
+        if (savedVictory) {
             state.victory = true;
             stopTimer();
             const timeElapsed = elapsedTimeElement.textContent;
@@ -777,7 +926,7 @@ async function handleReplay() {
 }
 
 // Initialisation du jeu
-function initGame() {
+async function initGame() {
     // Ajouter les écouteurs d'événements (une seule fois)
     setupEventListeners();
     
@@ -787,21 +936,8 @@ function initGame() {
     // Réinitialiser complètement l'état
     resetState();
     
-    // Définir le niveau
-    state.level = LEVEL;
-    
-    // Créer le plateau
-    createBoard();
-    
-    // Placer les pièces
-    placePieces();
-    
-    // Démarrer le chronomètre
-    state.startTime = performance.now();
-    startTimer();
-    
-    // Mettre à jour l'interface
-    updateUI();
+    // Charger le premier niveau depuis le JSON
+    await loadLevel('classic');
 }
 
 // Démarrer le jeu au chargement de la page
