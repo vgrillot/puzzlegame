@@ -358,6 +358,30 @@ function canOccupy(piece, row, col) {
     }
 
     const grid = state.level.grid;
+    
+    // Pour la pièce rouge, vérifier qu'elle ne peut pas être à cheval entre un mur ' ' et autre chose
+    // Elle peut être à cheval entre 'f' (sortie) et '.' ou 'd' (cases normales)
+    if (piece.type === 'd') {
+        let hasWallCell = false;  // Cellule sur un mur ' '
+        let hasNonWallCell = false;  // Cellule sur autre chose que ' '
+        
+        for (let r = row; r < row + piece.height; r += 1) {
+            for (let c = col; c < col + piece.width; c += 1) {
+                const gridCell = grid[r][c];
+                if (gridCell === ' ') {
+                    hasWallCell = true;
+                } else {
+                    hasNonWallCell = true;
+                }
+            }
+        }
+        
+        // Si la pièce rouge a au moins une cellule sur un mur ' ' ET au moins une cellule ailleurs,
+        // alors le mouvement est interdit (pas de position à cheval avec un mur)
+        if (hasWallCell && hasNonWallCell) {
+            return false;
+        }
+    }
 
     // Vérifier chaque cellule que la pièce occuperait
     for (let r = row; r < row + piece.height; r += 1) {
