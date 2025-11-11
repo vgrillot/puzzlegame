@@ -253,6 +253,14 @@ body {
     margin-bottom: 1.5rem;
 }
 
+/* Mobile: compress stats */
+@media (max-width: 640px) {
+    .stats-grid {
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+}
+
 .label {
     display: block;
     font-size: 0.7rem;
@@ -268,10 +276,31 @@ body {
     font-weight: 600;
 }
 
+/* Mobile: smaller stats */
+@media (max-width: 640px) {
+    .label {
+        font-size: 0.65rem;
+    }
+    
+    .value {
+        margin-top: 0.25rem;
+        font-size: 1.25rem;
+    }
+}
+
 .controls {
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
+}
+
+/* Mobile: buttons on one line with icons only */
+@media (max-width: 640px) {
+    .controls {
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
 }
 
 button {
@@ -284,6 +313,34 @@ button {
     text-transform: uppercase;
     cursor: pointer;
     transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+/* Mobile: icon-only buttons */
+@media (max-width: 640px) {
+    button {
+        padding: 0.75rem;
+        min-width: 48px;
+        font-size: 1.1rem;
+    }
+    
+    button .btn-text {
+        display: none;
+    }
+    
+    button i {
+        margin: 0;
+    }
+}
+
+/* Desktop: show text with icons */
+@media (min-width: 641px) {
+    button i {
+        font-size: 0.9em;
+    }
 }
 
 button:disabled {
@@ -309,6 +366,11 @@ button.secondary {
 button:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 12px 22px rgba(255, 87, 154, 0.25);
+}
+
+button:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 6px 12px rgba(255, 87, 154, 0.2);
 }
 
 .history-panel {
@@ -397,7 +459,7 @@ button:hover:not(:disabled) {
 
 @media (max-width: 640px) {
     .app-shell {
-        padding: 2rem 1.25rem;
+        padding: 1rem 0.75rem;
     }
 
     .board {
@@ -406,12 +468,11 @@ button:hover:not(:disabled) {
         padding: clamp(6px, 2vw, 12px);
     }
 
-    .controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
     .overlay-actions {
         flex-direction: column;
+    }
+    
+    .panel {
+        padding: 1rem;
     }
 }

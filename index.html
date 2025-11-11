@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Shiny Sliding Puzzle</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -40,9 +41,18 @@
                         </div>
                     </div>
                     <div class="controls">
-                        <button id="undoButton" class="secondary" disabled>Undo</button>
-                        <button id="resetButton" class="secondary">Reset</button>
-                        <button id="playbackButton" class="secondary" disabled>Replay Moves</button>
+                        <button id="undoButton" class="secondary" disabled title="Undo last move">
+                            <i class="fas fa-undo"></i>
+                            <span class="btn-text">Undo</span>
+                        </button>
+                        <button id="resetButton" class="secondary" title="Reset puzzle">
+                            <i class="fas fa-rotate-right"></i>
+                            <span class="btn-text">Reset</span>
+                        </button>
+                        <button id="playbackButton" class="secondary" disabled title="Replay moves">
+                            <i class="fas fa-play"></i>
+                            <span class="btn-text">Replay</span>
+                        </button>
                     </div>
                 </div>
                 <div class="panel history-panel">
